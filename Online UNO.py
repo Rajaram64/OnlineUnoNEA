@@ -1,9 +1,10 @@
 import pygame as pg
 import asyncio
+import pygame_gui as pgui
 async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
-    pg.display.set_caption("Online Uno")
+    pg.display.set_caption("Online Uno | Raj B :D")
     class text:
         def __init__(self, label, x_pos, y_pos):
             self.label = label
@@ -27,7 +28,7 @@ async def main():
             self.currentfont = "NeueMetanaNext-SemiBold.otf"
             self.colour = (0,0,0)
 
-        def draw_button(self, deltatime, currentpage, events):
+        def draw_button(self, refreshrate, currentpage, events):
             x_dimension, y_dimension = screen.get_size()
             mouspos = pg.mouse.get_pos()
             currenttext = pg.font.Font(self.currentfont ,(int(y_dimension * self.currentsize)))
@@ -44,10 +45,10 @@ async def main():
                 self.colour = (0,0,0)
 
             if self.currentsize < goal:
-                self.currentsize += self.pace * deltatime
+                self.currentsize += self.pace * refreshrate
                 self.currentsize = min(self.currentsize, goal)
             elif self.currentsize > goal:
-                self.currentsize -= self.pace * deltatime
+                self.currentsize -= self.pace * refreshrate
                 self.currentsize = max(self.currentsize, goal)
             currenttext = pg.font.Font(self.currentfont ,(int(y_dimension * self.currentsize)))
             image = currenttext.render(self.label, True, self.colour)
@@ -58,42 +59,76 @@ async def main():
                     return self.nxtpage
             return currentpage
 
-    async def testpage():
-        screen.fill((215, 0, 64))
-        TEST = text("TEST", 0.4, 0.08)
-        TEST.draw_title()
-        return "test"
+    class textinputs():
+        def __init__(self, xcords, ycords, xdimension, ydimension):
+            self.xcords = xcords
+            self.ycords = ycords
+            self.xdimension = xdimension
+            self.ydimension = ydimension
+            self.screenx = screen.get_size()[0]
+            self.screeny = screen.get_size()[1]
+            self.gui = pgui.UIManager(screen.get_size())
+            self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
+            self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
 
-    async def homepage(deltatime, CREATE, JOIN, events):
-        screen.fill((215, 0, 64))
-        currentpage = "home"
+        def draw_box(self, events, refreshrate):
+            for event in events:
+                self.gui.process_events(event)
+            self.gui.update(refreshrate)
+            self.gui.draw_ui(screen)
 
-        UNO = text("UNO", 0.5, 0.1)
+    class page:
+        def __init__(self, title, buttons, inputs):
+            self.title = title
+            self.buttons = buttons
+            self.inputs = inputs
 
-        currentpage = JOIN.draw_button(deltatime, currentpage, events)
-        currentpage = CREATE.draw_button(deltatime, currentpage, events)
-        UNO.draw_title()
-        #use if statements here to select what to return
-        return currentpage
+        def draw_page(self, refreshrate, events, currentpage):
+            screen.fill((215, 0, 64))
+            self.title.draw_title()
+            if self.buttons != None:
+                for button in self.buttons:
+                    currentpage = button.draw_button(refreshrate, currentpage, events)
+            if self.inputs != None:
+                for input in self.inputs:
+                    input.draw_box(events, refreshrate)
+
+
+            return currentpage
 
     async def gameloop():
+        fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
-        CREATE = button("CREATE", 0.5, 0.4, "test")
+        BACK = button("HOME", 0.5, 0.8, "home")
+        #this is all the objects for home
+        CREATE = button("CREATE", 0.5, 0.4, "create")
         JOIN = button("JOIN", 0.5, 0.6, "test")
-        fps = pg.time.Clock()
+        UNO = text("UNO", 0.5, 0.1)
+        HOME = page(UNO, [CREATE, JOIN], None)
+        #this is all the objects for test
+        TEST = text("TEST", 0.5, 0.1)
+        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None)
+        #All object for create page
+        CREATETITLE = text("Enter Username", 0.5, 0.1)
+        USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
+        CREATEPAGE = page(CREATETITLE, [BACK], [USERNAMEBOX])
+
         while playing:
             events = pg.event.get()
 
             for event in events:
                 if event.type == pg.QUIT:
                     playing = False #when the user presses the X button on the tab, this will end the game loop and close the program
-            deltatime = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
+
+            refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
 
             if currentpage == "home":
-                currentpage = await homepage(deltatime, CREATE, JOIN, events)
+                currentpage = HOME.draw_page(refreshrate, events, currentpage)
             if currentpage == "test":
-                currentpage = await testpage()
+                currentpage = TESTPAGE.draw_page(refreshrate, events, currentpage)
+            if currentpage == "create":
+                currentpage = CREATEPAGE.draw_page(refreshrate, events, currentpage)
             pg.display.flip()
 
     await gameloop()

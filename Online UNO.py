@@ -71,11 +71,19 @@ async def main():
             self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
             self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
 
-        def draw_box(self, events, refreshrate):
+        def draw_box(self, events, refreshrate, usrname, label):
             for event in events:
                 self.gui.process_events(event)
+                if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
+                    starttime = pg.time.get_ticks()
+                    usrname = event.text
+                    while pg.time.get_ticks() - starttime < 2000:
+                        THING = text(label, 0.5, 0.4)
+                        THING.draw_title()
+                        pg.display.flip()
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
+            return usrname
 
     class page:
         def __init__(self, title, buttons, inputs):
@@ -83,7 +91,7 @@ async def main():
             self.buttons = buttons
             self.inputs = inputs
 
-        def draw_page(self, refreshrate, events, currentpage):
+        def draw_page(self, refreshrate, events, currentpage, usrname):
             screen.fill((215, 0, 64))
             self.title.draw_title()
             if self.buttons != None:
@@ -91,12 +99,13 @@ async def main():
                     currentpage = button.draw_button(refreshrate, currentpage, events)
             if self.inputs != None:
                 for input in self.inputs:
-                    input.draw_box(events, refreshrate)
+                    usrname = input.draw_box(events, refreshrate, usrname, "Username set")
 
 
-            return currentpage
+            return currentpage, usrname
 
     async def gameloop():
+        usrname = ""
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
@@ -124,11 +133,11 @@ async def main():
             refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
 
             if currentpage == "home":
-                currentpage = HOME.draw_page(refreshrate, events, currentpage)
+                currentpage, usrname = HOME.draw_page(refreshrate, events, currentpage, None)
             if currentpage == "test":
-                currentpage = TESTPAGE.draw_page(refreshrate, events, currentpage)
+                currentpage, usrname = TESTPAGE.draw_page(refreshrate, events, currentpage, None)
             if currentpage == "create":
-                currentpage = CREATEPAGE.draw_page(refreshrate, events, currentpage)
+                currentpage, usrname = CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
             pg.display.flip()
 
     await gameloop()

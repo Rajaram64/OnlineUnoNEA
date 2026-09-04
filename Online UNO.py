@@ -77,8 +77,8 @@ async def main():
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
                     usrname = event.text
+                    THING = text(label, 0.5, 0.4)
                     while pg.time.get_ticks() - starttime < 2000:
-                        THING = text(label, 0.5, 0.4)
                         THING.draw_title()
                         pg.display.flip()
             self.gui.update(refreshrate)

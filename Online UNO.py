@@ -1,6 +1,7 @@
 import pygame as pg
 import asyncio
 import pygame_gui as pgui
+import websockets
 async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
@@ -10,7 +11,7 @@ async def main():
             self.label = label
             self.x_pos = x_pos
             self.y_pos = y_pos
-        def draw_title(self):
+        async def draw_title(self):
             x_dimension, y_dimension = screen.get_size()
             NeueBold = pg.font.Font("NeueMetanaNext-SemiBold.otf",(int(y_dimension * 0.13)))
             image = NeueBold.render(self.label, True, (0,0,0))
@@ -28,7 +29,7 @@ async def main():
             self.currentfont = "NeueMetanaNext-SemiBold.otf"
             self.colour = (0,0,0)
 
-        def draw_button(self, refreshrate, currentpage, events):
+        async def draw_button(self, refreshrate, currentpage, events):
             x_dimension, y_dimension = screen.get_size()
             mouspos = pg.mouse.get_pos()
             currenttext = pg.font.Font(self.currentfont ,(int(y_dimension * self.currentsize)))
@@ -71,7 +72,7 @@ async def main():
             self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
             self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
 
-        def draw_box(self, events, refreshrate, usrname, label):
+        async def draw_box(self, events, refreshrate, usrname, label):
             for event in events:
                 self.gui.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
@@ -79,7 +80,7 @@ async def main():
                     usrname = event.text
                     THING = text(label, 0.5, 0.4)
                     while pg.time.get_ticks() - starttime < 2000:
-                        THING.draw_title()
+                        await THING.draw_title()
                         pg.display.flip()
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
@@ -91,17 +92,15 @@ async def main():
             self.buttons = buttons
             self.inputs = inputs
 
-        def draw_page(self, refreshrate, events, currentpage, usrname):
+        async def draw_page(self, refreshrate, events, currentpage, usrname):
             screen.fill((215, 0, 64))
-            self.title.draw_title()
+            await self.title.draw_title()
             if self.buttons != None:
                 for button in self.buttons:
-                    currentpage = button.draw_button(refreshrate, currentpage, events)
+                    currentpage = await button.draw_button(refreshrate, currentpage, events)
             if self.inputs != None:
                 for input in self.inputs:
-                    usrname = input.draw_box(events, refreshrate, usrname, "Username set")
-
-
+                    usrname = await input.draw_box(events, refreshrate, usrname, "Username set")
             return currentpage, usrname
 
     async def gameloop():
@@ -133,11 +132,11 @@ async def main():
             refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
 
             if currentpage == "home":
-                currentpage, usrname = HOME.draw_page(refreshrate, events, currentpage, None)
+                currentpage, usrname = await HOME.draw_page(refreshrate, events, currentpage, None)
             if currentpage == "test":
-                currentpage, usrname = TESTPAGE.draw_page(refreshrate, events, currentpage, None)
+                currentpage, usrname = await TESTPAGE.draw_page(refreshrate, events, currentpage, None)
             if currentpage == "create":
-                currentpage, usrname = CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
             pg.display.flip()
 
     await gameloop()

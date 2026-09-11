@@ -10,6 +10,6 @@ async def recieve_username(connection):
     return username
 
 async def main():
-    server = await websockets.serve(recieve_username, "localhost", 8765)
+    await websockets.serve(recieve_username, "localhost", 8765)
     await asyncio.Future() #will run continously
 asyncio.run(main())

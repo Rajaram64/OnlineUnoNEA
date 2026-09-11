@@ -12,7 +12,7 @@ async def handle_usernames(connection):
         print(f"client {usrname} connected")
         print(f"clients: {clients}")
     except:
-        pass
+        print("error")
 
 async def main():
     server = await websockets.serve(handle_usernames, "localhost", 8765)

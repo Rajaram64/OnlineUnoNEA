@@ -6,7 +6,7 @@ async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
     pg.display.set_caption("Online Uno | Raj B :D")
-    class text:
+    class Text:
         def __init__(self, label, x_pos, y_pos):
             self.label = label
             self.x_pos = x_pos
@@ -18,7 +18,7 @@ async def main():
             rectangle = image.get_rect(center = (x_dimension * self.x_pos, y_dimension * self.y_pos))
             screen.blit(image, rectangle)
 
-    class button(text):
+    class button(Text):
         def __init__(self, label, x_pos, y_pos, nxtpage):
             super().__init__(label, x_pos, y_pos)
             self.nxtpage = nxtpage
@@ -66,8 +66,7 @@ async def main():
             self.ycords = ycords
             self.xdimension = xdimension
             self.ydimension = ydimension
-            self.screenx = screen.get_size()[0]
-            self.screeny = screen.get_size()[1]
+            self.screenx, self.screeny = screen.get_size()
             self.gui = pgui.UIManager(screen.get_size())
             self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
             self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
@@ -78,10 +77,32 @@ async def main():
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
                     usrname = event.text
-                    THING = text(label, 0.5, 0.4)
+                    SET = Text(label, 0.5, 0.4)
                     while pg.time.get_ticks() - starttime < 2000:
-                        await THING.draw_title()
+                        await SET.draw_title()
                         pg.display.flip()
+            self.gui.update(refreshrate)
+            self.gui.draw_ui(screen)
+            return usrname
+    class NetworkTextinputs(textinputs):
+        def __init__(self, xcords, ycords, xdimension, ydimension):
+            super().__init__(xcords, ycords, xdimension, ydimension)
+            self.connectionpoint = "ws://localhost:8765"
+        async def send_input(self, events, refreshrate, usrname, label):
+            for event in events:
+                self.gui.process_events(event)
+                if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
+                    starttime = pg.time.get_ticks()
+                    usrname = event.text
+                    SET = Text(label, 0.5, 0.4)
+                    while pg.time.get_ticks() - starttime < 2000:
+                        await SET.draw_title()
+                        pg.display.flip()
+                    connection = await websockets.connect(self.connectionpoint)
+                    await connection.send(usrname)
+                    confirmation = await connection.recv()
+                    await connection.close()
+                    print(confirmation)
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
             return usrname
@@ -112,14 +133,14 @@ async def main():
         #this is all the objects for home
         CREATE = button("CREATE", 0.5, 0.4, "create")
         JOIN = button("JOIN", 0.5, 0.6, "test")
-        UNO = text("UNO", 0.5, 0.1)
+        UNO = Text("UNO", 0.5, 0.1)
         HOME = page(UNO, [CREATE, JOIN], None)
         #this is all the objects for test
-        TEST = text("TEST", 0.5, 0.1)
+        TEST = Text("TEST", 0.5, 0.1)
         TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None)
         #All object for create page
-        CREATETITLE = text("Enter Username", 0.5, 0.1)
-        USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
+        CREATETITLE = Text("Enter Username", 0.5, 0.1)
+        USERNAMEBOX = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07)
         CREATEPAGE = page(CREATETITLE, [BACK], [USERNAMEBOX])
 
         while playing:

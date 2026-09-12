@@ -84,6 +84,7 @@ async def main():
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
             return usrname
+
     class NetworkTextinputs(textinputs):
         def __init__(self, xcords, ycords, xdimension, ydimension):
             super().__init__(xcords, ycords, xdimension, ydimension)
@@ -121,7 +122,7 @@ async def main():
                     currentpage = await button.draw_button(refreshrate, currentpage, events)
             if self.inputs != None:
                 for input in self.inputs:
-                    usrname = await input.draw_box(events, refreshrate, usrname, "Username set")
+                    usrname = await input.send_input(events, refreshrate, usrname, "Username set")
             return currentpage, usrname
 
     async def gameloop():

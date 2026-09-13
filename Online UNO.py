@@ -77,7 +77,7 @@ async def main():
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
                     usrname = event.text
-                    SET = Text(label, 0.5, 0.4)
+                    SET = Text(label, self.xcords + 0.15, self.ycords)
                     while pg.time.get_ticks() - starttime < 2000:
                         await SET.draw_title()
                         pg.display.flip()
@@ -94,25 +94,26 @@ async def main():
                 self.gui.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
-                    usrname = event.text
                     SET = Text(label, 0.5, 0.4)
+                    usrinput = event.text
                     while pg.time.get_ticks() - starttime < 2000:
                         await SET.draw_title()
                         pg.display.flip()
                     connection = await websockets.connect(self.connectionpoint)
-                    await connection.send(usrname)
+                    package = [usrname, usrinput]
+                    await connection.send(package)
                     confirmation = await connection.recv()
                     await connection.close()
                     print(confirmation)
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
-            return usrname
 
     class page:
-        def __init__(self, title, buttons, inputs):
+        def __init__(self, title, buttons, inputs, networkinputs):
             self.title = title
             self.buttons = buttons
             self.inputs = inputs
+            self.networkinputs = networkinputs
 
         async def draw_page(self, refreshrate, events, currentpage, usrname):
             screen.fill((215, 0, 64))
@@ -122,11 +123,16 @@ async def main():
                     currentpage = await button.draw_button(refreshrate, currentpage, events)
             if self.inputs != None:
                 for input in self.inputs:
-                    usrname = await input.send_input(events, refreshrate, usrname, "Username set")
+                    usrname = await input.draw_box(events, refreshrate, usrname, "Username set")
+            if self.networkinputs != None:
+                for netinput in self.networkinputs:
+                    usrname = await netinput.send_input(events, refreshrate, usrname, "Username set")
             return currentpage, usrname
 
     async def gameloop():
         usrname = ""
+        USERNAMEBOX = textinputs(0.3525, 0.8, 0.3, 0.07)
+        ROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07)
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
@@ -135,14 +141,13 @@ async def main():
         CREATE = button("CREATE", 0.5, 0.4, "create")
         JOIN = button("JOIN", 0.5, 0.6, "test")
         UNO = Text("UNO", 0.5, 0.1)
-        HOME = page(UNO, [CREATE, JOIN], None)
+        HOME = page(UNO, [CREATE, JOIN], [USERNAMEBOX], None)
         #this is all the objects for test
         TEST = Text("TEST", 0.5, 0.1)
-        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None)
+        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
         CREATETITLE = Text("Enter Username", 0.5, 0.1)
-        USERNAMEBOX = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07)
-        CREATEPAGE = page(CREATETITLE, [BACK], [USERNAMEBOX])
+        CREATEPAGE = page(CREATETITLE, [BACK], None, [ROOMCODE])
 
         while playing:
             events = pg.event.get()
@@ -160,6 +165,7 @@ async def main():
             if currentpage == "create":
                 currentpage, usrname = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
             pg.display.flip()
+
 
     await gameloop()
 asyncio.run(main())

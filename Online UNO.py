@@ -2,6 +2,7 @@ import pygame as pg
 import asyncio
 import pygame_gui as pgui
 import websockets
+import json
 async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
@@ -100,13 +101,21 @@ async def main():
                         await SET.draw_title()
                         pg.display.flip()
                     connection = await websockets.connect(self.connectionpoint)
-                    package = [usrname, usrinput]
-                    await connection.send(package)
+                    package = '''{"hostpackage": [
+                        {}
+                        ]}'''
+                    json_package = json.loads(package)
+                    json_package["hostpackage"][0]["room code"] = usrinput
+                    json_package["hostpackage"][0]["username"] = str(usrname)
+                    newpackage = json.dumps(json_package)
+                    print(newpackage)
+                    await connection.send(newpackage)
                     confirmation = await connection.recv()
                     await connection.close()
                     print(confirmation)
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
+            return usrname
 
     class page:
         def __init__(self, title, buttons, inputs, networkinputs):
@@ -123,31 +132,35 @@ async def main():
                     currentpage = await button.draw_button(refreshrate, currentpage, events)
             if self.inputs != None:
                 for input in self.inputs:
-                    usrname = await input.draw_box(events, refreshrate, usrname, "Username set")
+                    usrname = await input.draw_box(events, refreshrate, usrname, "username set")
             if self.networkinputs != None:
                 for netinput in self.networkinputs:
-                    usrname = await netinput.send_input(events, refreshrate, usrname, "Username set")
+                    usrname = await netinput.send_input(events, refreshrate, usrname, "Room code set")
             return currentpage, usrname
 
     async def gameloop():
         usrname = ""
-        USERNAMEBOX = textinputs(0.3525, 0.8, 0.3, 0.07)
+        USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
         ROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07)
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
-        BACK = button("HOME", 0.5, 0.8, "home")
+        BACK = button("HOME", 0.2, 0.9, "home")
         #this is all the objects for home
         CREATE = button("CREATE", 0.5, 0.4, "create")
         JOIN = button("JOIN", 0.5, 0.6, "test")
+        USERNAME = button("USERNAME", 0.5, 0.8, "username")
         UNO = Text("UNO", 0.5, 0.1)
-        HOME = page(UNO, [CREATE, JOIN], [USERNAMEBOX], None)
+        HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None)
         #this is all the objects for test
         TEST = Text("TEST", 0.5, 0.1)
         TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
-        CREATETITLE = Text("Enter Username", 0.5, 0.1)
+        CREATETITLE = Text("Enter Room Code", 0.5, 0.1)
         CREATEPAGE = page(CREATETITLE, [BACK], None, [ROOMCODE])
+        #This is all objects for Username page
+        USERNAMETITLE = Text("Enter Username", 0.5, 0.1)
+        USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
 
         while playing:
             events = pg.event.get()
@@ -159,11 +172,13 @@ async def main():
             refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
 
             if currentpage == "home":
-                currentpage, usrname = await HOME.draw_page(refreshrate, events, currentpage, None)
+                currentpage, usrname = await HOME.draw_page(refreshrate, events, currentpage, usrname)
             if currentpage == "test":
                 currentpage, usrname = await TESTPAGE.draw_page(refreshrate, events, currentpage, None)
             if currentpage == "create":
                 currentpage, usrname = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
+            if currentpage == "username":
+                currentpage, usrname = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname)
             pg.display.flip()
 
 

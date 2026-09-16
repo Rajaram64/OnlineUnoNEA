@@ -1,22 +1,27 @@
 import websockets
 import asyncio
+import json
 
 clients = []
-hosts = []
+Lobbies = []
 async def handle_hosts(connection):
     global clients
-    global hosts
+    global Lobbies
     try:
         package = await connection.recv()
-        clients.append(package[0])
-        confirmation = f"username sent by server and recieved by client {package[0]}"
+        packet = json.loads(package)
+        username = str(packet["hostpackage"][0]["username"])
+        room_code = int(packet["hostpackage"][0]["room code"])
+        host = [username, room_code]
+        clients.append(username)
+        confirmation = f"username recieved by server and sent by client {username}"
         await connection.send(confirmation)
-        print(f"client {package[0]} connected")
+        print(f"client {username} connected")
         print(f"clients: {clients}")
-        hosts.append(package)
-        print(f"hosts: {hosts}")
-    except:
-        print("error")
+        Lobbies.append(host)
+        print(f"hosts: {Lobbies}")
+    except Exception as e:
+        print(f"error: {type(e).__name__} {e}")
 
 async def main():
     server = await websockets.serve(handle_hosts, "localhost", 8765)

@@ -87,9 +87,10 @@ async def main():
             return usrname
 
     class NetworkTextinputs(textinputs):
-        def __init__(self, xcords, ycords, xdimension, ydimension):
+        def __init__(self, xcords, ycords, xdimension, ydimension, type):
             super().__init__(xcords, ycords, xdimension, ydimension)
             self.connectionpoint = "ws://localhost:8765"
+            self.type = type
         async def send_input(self, events, refreshrate, usrname, label):
             for event in events:
                 self.gui.process_events(event)
@@ -101,12 +102,13 @@ async def main():
                         await SET.draw_title()
                         pg.display.flip()
                     connection = await websockets.connect(self.connectionpoint)
-                    package = '''{"hostpackage": [
+                    package = '''{"package": [
                         {}
                         ]}'''
                     json_package = json.loads(package)
-                    json_package["hostpackage"][0]["room code"] = usrinput
-                    json_package["hostpackage"][0]["username"] = str(usrname)
+                    json_package["package"][0]["room code"] = int(usrinput)
+                    json_package["package"][0]["username"] = str(usrname)
+                    json_package["package"][0]["type"] = self.type
                     newpackage = json.dumps(json_package)
                     print(newpackage)
                     await connection.send(newpackage)
@@ -138,17 +140,25 @@ async def main():
                     usrname = await netinput.send_input(events, refreshrate, usrname, "Room code set")
             return currentpage, usrname
 
-    async def gameloop():
+
+
+    async def hostsettings(refreshrate, events, currentpage, usrname):
+        screen.fill(222, 49, 99)
+
+
+        return currentpage, usrname
+
+
+    async def homeloop():
         usrname = ""
         USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
-        ROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07)
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
         BACK = button("HOME", 0.2, 0.9, "home")
         #this is all the objects for home
         CREATE = button("CREATE", 0.5, 0.4, "create")
-        JOIN = button("JOIN", 0.5, 0.6, "test")
+        JOIN = button("JOIN", 0.5, 0.6, "join")
         USERNAME = button("USERNAME", 0.5, 0.8, "username")
         UNO = Text("UNO", 0.5, 0.1)
         HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None)
@@ -157,10 +167,17 @@ async def main():
         TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
         CREATETITLE = Text("Enter Room Code", 0.5, 0.1)
-        CREATEPAGE = page(CREATETITLE, [BACK], None, [ROOMCODE])
+        CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "HC")
+        CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE])
         #This is all objects for Username page
         USERNAMETITLE = Text("Enter Username", 0.5, 0.1)
         USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
+        #All objects for join page
+        JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "JL")
+        JOINTITLE = Text("Enter Room Code", 0.5, 0.1)
+        JOINPAGE = page(JOINTITLE, [BACK], None, [JOINROOMCODE])
+        #all objects for settings on lobby creation page
+
 
         while playing:
             events = pg.event.get()
@@ -174,13 +191,13 @@ async def main():
             if currentpage == "home":
                 currentpage, usrname = await HOME.draw_page(refreshrate, events, currentpage, usrname)
             if currentpage == "test":
-                currentpage, usrname = await TESTPAGE.draw_page(refreshrate, events, currentpage, None)
+                currentpage, usrname = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname)
             if currentpage == "create":
                 currentpage, usrname = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
             if currentpage == "username":
                 currentpage, usrname = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname)
+            if currentpage == "join":
+                currentpage, usrname = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname)
             pg.display.flip()
-
-
-    await gameloop()
+    await homeloop()
 asyncio.run(main())

@@ -8,21 +8,22 @@ async def main():
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
     pg.display.set_caption("Online Uno | Raj B :D")
     class Text:
-        def __init__(self, label, x_pos, y_pos):
+        def __init__(self, label, x_pos, y_pos, size):
             self.label = label
             self.x_pos = x_pos
             self.y_pos = y_pos
+            self.size = size
 
         async def draw_title(self):
             x_dimension, y_dimension = screen.get_size()
-            NeueBold = pg.font.Font("NeueMetanaNext-SemiBold.otf",(int(y_dimension * 0.13)))
+            NeueBold = pg.font.Font("NeueMetanaNext-SemiBold.otf",(int(y_dimension * self.size)))
             image = NeueBold.render(self.label, True, (0,0,0))
             rectangle = image.get_rect(center = (x_dimension * self.x_pos, y_dimension * self.y_pos))
             screen.blit(image, rectangle)
 
     class button(Text):
-        def __init__(self, label, x_pos, y_pos, nxtpage):
-            super().__init__(label, x_pos, y_pos)
+        def __init__(self, label, x_pos, y_pos, nxtpage, size):
+            super().__init__(label, x_pos, y_pos, size)
             self.nxtpage = nxtpage
             self.base = 0.08
             self.max = 0.14
@@ -72,7 +73,7 @@ async def main():
             self.xdimension = xdimension
             self.ydimension = ydimension
             self.screenx, self.screeny = screen.get_size()
-            self.gui = pgui.UIManager(screen.get_size())
+            self.gui = pgui.UIManager((self.screenx, self.screeny))
             self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
             self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
 
@@ -82,8 +83,7 @@ async def main():
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
                     usrname = event.text
-                    SET = Text(label, self.xcords + 0.15, self.ycords)
-
+                    SET = Text(label, self.xcords + 0.15, self.ycords, 0.13)
                     while pg.time.get_ticks() - starttime < 2000:
                         await SET.draw_title()
                         pg.display.flip()
@@ -97,14 +97,14 @@ async def main():
             self.connectionpoint = "ws://localhost:8765"
             self.type = type
 
-        async def send_input(self, events, refreshrate, usrname, label):
+        async def send_input(self, events, refreshrate, usrname, label, currentpage):
 
             for event in events:
                 self.gui.process_events(event)
 
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
-                    SET = Text(label, 0.5, 0.4)
+                    SET = Text(label, 0.5, 0.4, 0.13)
                     usrinput = event.text
 
                     while pg.time.get_ticks() - starttime < 2000:
@@ -124,10 +124,12 @@ async def main():
                     confirmation = await connection.recv()
                     await connection.close()
                     print(confirmation)
+                    currentpage = "host"
+                    return usrname, usrinput, currentpage
 
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
-            return usrname
+            return usrname, None, currentpage
 
     class page:
         def __init__(self, title, buttons, inputs, networkinputs):
@@ -136,7 +138,7 @@ async def main():
             self.inputs = inputs
             self.networkinputs = networkinputs
 
-        async def draw_page(self, refreshrate, events, currentpage, usrname):
+        async def draw_page(self, refreshrate, events, currentpage, usrname, roomcode):
             screen.fill((215, 0, 64))
             await self.title.draw_title()
             if self.buttons != None:
@@ -149,41 +151,50 @@ async def main():
 
             if self.networkinputs != None:
                 for netinput in self.networkinputs:
-                    usrname = await netinput.send_input(events, refreshrate, usrname, "Room code set")
-            return currentpage, usrname
+                    usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, "Room code set", currentpage)
+            return currentpage, usrname, roomcode
 
-    async def hostsettings(refreshrate, events, currentpage, usrname):
-        screen.fill(222, 49, 99)
+    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05)):
+        screen.fill((222, 49, 99))
+        ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
+        await LOBBYMENU.draw_title()
+        await ROOMCODE.draw_title()
+        currentpage = await LEAVE.draw_button(refreshrate, currentpage, events)
 
-        return currentpage, usrname
+        return currentpage, usrname, roomcode
+
+    async def usermenu(refreshrate, events, currentpage, usrname, roomcode):
+        screen.fill((222, 49, 99))
+
+        return currentpage, usrname, roomcode
 
     async def homeloop():
         usrname = ""
+        roomcode = 0
         USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
-        BACK = button("HOME", 0.2, 0.9, "home")
+        BACK = button("HOME", 0.2, 0.9, "home", None)
         #this is all the objects for home
-        CREATE = button("CREATE", 0.5, 0.8, "create")
-        JOIN = button("JOIN", 0.5, 0.6, "join")
-        USERNAME = button("USERNAME", 0.5, 0.4, "username")
-        UNO = Text("UNO", 0.5, 0.1)
+        CREATE = button("CREATE", 0.5, 0.8, "create", None)
+        JOIN = button("JOIN", 0.5, 0.6, "join", None)
+        USERNAME = button("USERNAME", 0.5, 0.4, "username", None)
+        UNO = Text("UNO", 0.5, 0.1, 0.13)
         HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None)
         #this is all the objects for test
-        TEST = Text("TEST", 0.5, 0.1)
+        TEST = Text("TEST", 0.5, 0.1, 0.13)
         TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
-        CREATETITLE = Text("Enter Room Code", 0.5, 0.1)
+        CREATETITLE = Text("Enter Room Code", 0.5, 0.1, 0.13)
         CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "HC")
         CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE])
         #This is all objects for Username page
-        USERNAMETITLE = Text("Enter Username", 0.5, 0.1)
+        USERNAMETITLE = Text("Enter Username", 0.5, 0.1, 0.13)
         USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
         #All objects for join page
         JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "JL")
-        JOINTITLE = Text("Enter Room Code", 0.5, 0.1)
-        JOINPAGE = page(JOINTITLE, [BACK], None, [JOINROOMCODE])
+        JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE])
         #all objects for settings on lobby creation page
 
         while playing:
@@ -196,15 +207,20 @@ async def main():
             refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
 
             if currentpage == "home":
-                currentpage, usrname = await HOME.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname, roomcode = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "test":
-                currentpage, usrname = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname, roomcode = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "create":
-                currentpage, usrname = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname, roomcode = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "username":
-                currentpage, usrname = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname, roomcode = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "join":
-                currentpage, usrname = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname)
+                currentpage, usrname, roomcode = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+            if currentpage == "host":
+                currentpage, usrname, roomcode = await hostmenu(refreshrate, events, currentpage, usrname, roomcode)
+            if currentpage == "user":
+                currentpage, usrname, roomcode = await usermenu(refreshrate, events, currentpage, usrname, roomcode)
             pg.display.flip()
+
     await homeloop()
 asyncio.run(main())

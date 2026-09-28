@@ -34,7 +34,6 @@ async def handle_client_connections(connection):
         await connection.send(confirmation)
 
     elif type == "JL" and roomcode in roomcodes and username not in usernames and username != "":
-
         identifier = [username, roomcode, type]
         usernames.append(username)
         clients.append(identifier)

@@ -25,10 +25,7 @@ async def main():
         def __init__(self, label, x_pos, y_pos, nxtpage, size):
             super().__init__(label, x_pos, y_pos, size)
             self.nxtpage = nxtpage
-            self.base = 0.08
-            self.max = 0.14
-            self.pace = 0.6
-            self.currentsize = self.base
+            self.currentsize = 0.08
             self.currentfont = "NeueMetanaNext-SemiBold.otf"
             self.colour = (0,0,0)
 
@@ -41,19 +38,19 @@ async def main():
             hover = rectangle.collidepoint(mouspos)
 
             if hover:
-                goal = self.max
+                goal = 0.14
                 self.currentfont = "NeueMetanaNextOutline-Black.otf"
                 self.colour = (255,255,255)
             else:
-                goal = self.base
+                goal = 0.08
                 self.currentfont = "NeueMetanaNext-SemiBold.otf"
                 self.colour = (0,0,0)
 
             if self.currentsize < goal:
-                self.currentsize += self.pace * refreshrate
+                self.currentsize += 0.6 * refreshrate
                 self.currentsize = min(self.currentsize, goal)
             elif self.currentsize > goal:
-                self.currentsize -= self.pace * refreshrate
+                self.currentsize -= 0.6 * refreshrate
                 self.currentsize = max(self.currentsize, goal)
 
             currenttext = pg.font.Font(self.currentfont ,(int(y_dimension * self.currentsize)))
@@ -103,13 +100,7 @@ async def main():
                 self.gui.process_events(event)
 
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
-                    starttime = pg.time.get_ticks()
-                    SET = Text(label, 0.5, 0.4, 0.13)
                     usrinput = event.text
-
-                    while pg.time.get_ticks() - starttime < 2000:
-                        await SET.draw_title()
-                        pg.display.flip()
                     connection = await websockets.connect(self.connectionpoint)
                     package = '''{"package": [
                         {}
@@ -155,16 +146,26 @@ async def main():
             return currentpage, usrname, roomcode
 
     async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05)):
+        x, y = screen.get_size()
         screen.fill((222, 49, 99))
         ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
+        pg.draw.rect(screen, (192, 30, 76), (x*0.01, y*0.2, x*0.28, y*0.7), width=0, border_radius=60)
+        pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.2, x*0.32, y*0.35), width=0, border_radius=60)
+        pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.57, x*0.32, y*0.35), width=0, border_radius=60)
+        pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.2, x*0.35, y*0.35), width=0, border_radius=60)
+        pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.57, x*0.35, y*0.35), width=0, border_radius=60)
+
+
         await LOBBYMENU.draw_title()
         await ROOMCODE.draw_title()
+
         currentpage = await LEAVE.draw_button(refreshrate, currentpage, events)
 
         return currentpage, usrname, roomcode
 
     async def usermenu(refreshrate, events, currentpage, usrname, roomcode):
         screen.fill((222, 49, 99))
+
 
         return currentpage, usrname, roomcode
 

@@ -144,20 +144,45 @@ async def main():
                 for netinput in self.networkinputs:
                     usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, "Room code set", currentpage)
             return currentpage, usrname, roomcode
+    class checkbox:
+        def __init__(self, xcords, ycords, xdimension, ydimension):
+            self.xcords = xcords
+            self.ycords = ycords
+            self.xdimension = xdimension
+            self.ydimension = ydimension
+            self.screenx, self.screeny = screen.get_size()
+            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=manager)
+        async def draw_checkbox(self, refreshrate, events, manager):
+            checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=manager)
+            for event in events:
+                manager.process_events(event)
+            manager.update(refreshrate)
+            manager.draw_ui(screen)
 
-    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05)):
+    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
         x, y = screen.get_size()
         screen.fill((222, 49, 99))
+        pguimanager = pgui.UIManager((x, y))
         ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
         pg.draw.rect(screen, (192, 30, 76), (x*0.01, y*0.2, x*0.28, y*0.7), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.2, x*0.32, y*0.35), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.57, x*0.32, y*0.35), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.2, x*0.35, y*0.35), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.57, x*0.35, y*0.35), width=0, border_radius=60)
+        RULES = Text("Rules", 0.08, 0.25, 0.05)
+        STACKDRAW = Text("Stack Draw", 0.11, 0.32, 0.04)
+        CARDS = Text("Cards", 0.11, 0.37, 0.04)
+        CUTIN = Text("Cut IN", 0.11, 0.42, 0.04)
+
 
 
         await LOBBYMENU.draw_title()
         await ROOMCODE.draw_title()
+        await RULES.draw_title()
+        await STACKDRAW.draw_title()
+        await CARDS.draw_title()
+        await stackdrawcards.draw_checkbox(refreshrate, events, pguimanager)
+        await CUTIN.draw_title()
 
         currentpage = await LEAVE.draw_button(refreshrate, currentpage, events)
 

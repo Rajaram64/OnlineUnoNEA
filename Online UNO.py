@@ -7,6 +7,7 @@ async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
     pg.display.set_caption("Online Uno | Raj B :D")
+    pguimanager = pgui.UIManager(screen.get_size())
     class Text:
         def __init__(self, label, x_pos, y_pos, size):
             self.label = label
@@ -106,17 +107,20 @@ async def main():
                         {}
                         ]}'''
                     json_package = json.loads(package)
-                    json_package["package"][0]["room code"] = int(usrinput)
-                    json_package["package"][0]["username"] = str(usrname)
-                    json_package["package"][0]["type"] = self.type
-                    newpackage = json.dumps(json_package)
-                    print(newpackage)
-                    await connection.send(newpackage)
-                    confirmation = await connection.recv()
-                    await connection.close()
-                    print(confirmation)
-                    currentpage = "host"
-                    return usrname, usrinput, currentpage
+                    try:
+                        json_package["package"][0]["room code"] = int(usrinput)
+                        json_package["package"][0]["username"] = str(usrname)
+                        json_package["package"][0]["type"] = self.type
+                        newpackage = json.dumps(json_package)
+                        print(newpackage)
+                        await connection.send(newpackage)
+                        confirmation = await connection.recv()
+                        await connection.close()
+                        print(confirmation)
+                        currentpage = "host"
+                        return usrname, usrinput, currentpage
+                    except:
+                        pass
 
             self.gui.update(refreshrate)
             self.gui.draw_ui(screen)
@@ -151,18 +155,16 @@ async def main():
             self.xdimension = xdimension
             self.ydimension = ydimension
             self.screenx, self.screeny = screen.get_size()
-            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=manager)
+            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=pguimanager)
         async def draw_checkbox(self, refreshrate, events, manager):
-            checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=manager)
             for event in events:
                 manager.process_events(event)
             manager.update(refreshrate)
             manager.draw_ui(screen)
 
-    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
+    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, manager, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
         x, y = screen.get_size()
         screen.fill((222, 49, 99))
-        pguimanager = pgui.UIManager((x, y))
         ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
         pg.draw.rect(screen, (192, 30, 76), (x*0.01, y*0.2, x*0.28, y*0.7), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.2, x*0.32, y*0.35), width=0, border_radius=60)
@@ -173,9 +175,7 @@ async def main():
         STACKDRAW = Text("Stack Draw", 0.11, 0.32, 0.04)
         CARDS = Text("Cards", 0.11, 0.37, 0.04)
         CUTIN = Text("Cut IN", 0.11, 0.42, 0.04)
-
-
-
+        ZEROSEVENSWAP = Text("0-7 swap", 0.11, 0.45, 0.04)
         await LOBBYMENU.draw_title()
         await ROOMCODE.draw_title()
         await RULES.draw_title()
@@ -183,6 +183,7 @@ async def main():
         await CARDS.draw_title()
         await stackdrawcards.draw_checkbox(refreshrate, events, pguimanager)
         await CUTIN.draw_title()
+        await ZEROSEVENSWAP.draw_title()
 
         currentpage = await LEAVE.draw_button(refreshrate, currentpage, events)
 
@@ -229,9 +230,10 @@ async def main():
             for event in events:
                 if event.type == pg.QUIT:
                     playing = False #when the user presses the X button on the tab, this will end the game loop and close the program
+                pguimanager.process_events(event)
 
-            refreshrate = fps.tick(60)/1000   #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
-
+            refreshrate = fps.tick(60)/1000 #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
+            pguimanager.update(refreshrate)
             if currentpage == "home":
                 currentpage, usrname, roomcode = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "test":
@@ -243,10 +245,12 @@ async def main():
             if currentpage == "join":
                 currentpage, usrname, roomcode = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "host":
-                currentpage, usrname, roomcode = await hostmenu(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode = await hostmenu(refreshrate, events, currentpage, usrname, roomcode, pguimanager)
             if currentpage == "user":
                 currentpage, usrname, roomcode = await usermenu(refreshrate, events, currentpage, usrname, roomcode)
             pg.display.flip()
+            pguimanager.draw_ui(screen)
+
 
     await homeloop()
 asyncio.run(main())

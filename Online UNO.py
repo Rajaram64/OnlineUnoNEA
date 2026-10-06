@@ -3,6 +3,7 @@ import asyncio
 import pygame_gui as pgui
 import websockets
 import json
+from typing import Final
 async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
@@ -65,19 +66,18 @@ async def main():
             return currentpage
 
     class textinputs():
-        def __init__(self, xcords, ycords, xdimension, ydimension):
+        def __init__(self, xcords, ycords, xdimension, ydimension, manager):
             self.xcords = xcords
             self.ycords = ycords
             self.xdimension = xdimension
             self.ydimension = ydimension
+            self.manager = manager
             self.screenx, self.screeny = screen.get_size()
-            self.gui = pgui.UIManager((self.screenx, self.screeny))
             self.rect = pg.Rect((self.screenx * self.xcords, self.screeny * self.ycords),(self.screenx * self.xdimension, self.screeny * self.ydimension))
-            self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.gui, object_id="#main_text_entry")
+            self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.manager, object_id="#main_text_entry")
 
         async def draw_box(self, events, refreshrate, usrname, label):
             for event in events:
-                self.gui.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     starttime = pg.time.get_ticks()
                     usrname = event.text
@@ -85,20 +85,20 @@ async def main():
                     while pg.time.get_ticks() - starttime < 2000:
                         await SET.draw_title()
                         pg.display.flip()
-            self.gui.update(refreshrate)
-            self.gui.draw_ui(screen)
+                    event.text = ""
+            self.manager.update(refreshrate)
+            self.manager.draw_ui(screen)
             return usrname
 
     class NetworkTextinputs(textinputs):
-        def __init__(self, xcords, ycords, xdimension, ydimension, type):
-            super().__init__(xcords, ycords, xdimension, ydimension)
+        def __init__(self, xcords, ycords, xdimension, ydimension, manager, type):
+            super().__init__(xcords, ycords, xdimension, ydimension, manager)
             self.connectionpoint = "ws://localhost:8765"
             self.type = type
 
         async def send_input(self, events, refreshrate, usrname, label, currentpage):
 
             for event in events:
-                self.gui.process_events(event)
 
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
                     usrinput = event.text
@@ -121,9 +121,10 @@ async def main():
                         return usrname, usrinput, currentpage
                     except:
                         pass
+                    event.text = ""
 
-            self.gui.update(refreshrate)
-            self.gui.draw_ui(screen)
+            self.manager.update(refreshrate)
+            self.manager.draw_ui(screen)
             return usrname, None, currentpage
 
     class page:
@@ -149,20 +150,21 @@ async def main():
                     usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, "Room code set", currentpage)
             return currentpage, usrname, roomcode
     class checkbox:
-        def __init__(self, xcords, ycords, xdimension, ydimension):
+        def __init__(self, xcords, ycords, xdimension, ydimension, manager):
             self.xcords = xcords
             self.ycords = ycords
             self.xdimension = xdimension
             self.ydimension = ydimension
+            self.manager = manager
             self.screenx, self.screeny = screen.get_size()
-            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=pguimanager)
-        async def draw_checkbox(self, refreshrate, events, manager):
+        async def draw_checkbox(self, refreshrate, events):
+            checkbox: Final = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=self.manager)
             for event in events:
-                manager.process_events(event)
-            manager.update(refreshrate)
-            manager.draw_ui(screen)
+                self.manager.process_events(event)
+            self.manager.update(refreshrate)
+            self.manager.draw_ui(screen)
 
-    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, manager, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
+    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05, pguimanager)):
         x, y = screen.get_size()
         screen.fill((222, 49, 99))
         ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
@@ -172,7 +174,6 @@ async def main():
         pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.2, x*0.35, y*0.35), width=0, border_radius=60)
         pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.57, x*0.35, y*0.35), width=0, border_radius=60)
         RULES = Text("Rules", 0.08, 0.25, 0.05)
-        STACKDRAW = Text("Stack Draw", 0.11, 0.32, 0.04)
         CARDS = Text("Cards", 0.11, 0.37, 0.04)
         CUTIN = Text("Cut IN", 0.11, 0.42, 0.04)
         ZEROSEVENSWAP = Text("0-7 swap", 0.11, 0.45, 0.04)
@@ -181,7 +182,7 @@ async def main():
         await RULES.draw_title()
         await STACKDRAW.draw_title()
         await CARDS.draw_title()
-        await stackdrawcards.draw_checkbox(refreshrate, events, pguimanager)
+        await stackdrawcards.draw_checkbox(refreshrate, events)
         await CUTIN.draw_title()
         await ZEROSEVENSWAP.draw_title()
 
@@ -198,7 +199,7 @@ async def main():
     async def homeloop():
         usrname = ""
         roomcode = 0
-        USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
+        USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07, pguimanager)
         fps = pg.time.Clock()
         playing = True #Boolean for controlling game loop
         currentpage = "home"
@@ -214,26 +215,21 @@ async def main():
         TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
         CREATETITLE = Text("Enter Room Code", 0.5, 0.1, 0.13)
-        CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "HC")
+        CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, pguimanager, "HC")
         CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE])
         #This is all objects for Username page
         USERNAMETITLE = Text("Enter Username", 0.5, 0.1, 0.13)
         USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
         #All objects for join page
-        JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "JL")
+        JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, pguimanager, "JL")
         JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE])
         #all objects for settings on lobby creation page
 
         while playing:
             events = pg.event.get()
-
-            for event in events:
-                if event.type == pg.QUIT:
-                    playing = False #when the user presses the X button on the tab, this will end the game loop and close the program
-                pguimanager.process_events(event)
-
             refreshrate = fps.tick(60)/1000 #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
             pguimanager.update(refreshrate)
+            pguimanager.draw_ui(screen)
             if currentpage == "home":
                 currentpage, usrname, roomcode = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "test":
@@ -248,8 +244,13 @@ async def main():
                 currentpage, usrname, roomcode = await hostmenu(refreshrate, events, currentpage, usrname, roomcode, pguimanager)
             if currentpage == "user":
                 currentpage, usrname, roomcode = await usermenu(refreshrate, events, currentpage, usrname, roomcode)
+
+            for event in events:
+                if event.type == pg.QUIT:
+                    playing = False #when the user presses the X button on the tab, this will end the game loop and close the program
+                pguimanager.process_events(event)
+
             pg.display.flip()
-            pguimanager.draw_ui(screen)
 
 
     await homeloop()

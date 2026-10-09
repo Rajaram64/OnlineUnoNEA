@@ -1,10 +1,8 @@
 import pygame as pg
 import asyncio
 import pygame_gui as pgui
-from pygame_gui.ui_manager import UIManager
 import websockets
 import json
-from typing import Final
 async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
@@ -16,7 +14,7 @@ async def main():
             self.y_pos = y_pos
             self.size = size
 
-        async def draw_title(self):
+        def draw_title(self):
             x_dimension, y_dimension = screen.get_size()
             NeueBold = pg.font.Font("NeueMetanaNext-SemiBold.otf",(int(y_dimension * self.size)))
             image = NeueBold.render(self.label, True, (0,0,0))
@@ -31,7 +29,7 @@ async def main():
             self.currentfont = "NeueMetanaNext-SemiBold.otf"
             self.colour = (0,0,0)
 
-        async def draw_button(self, refreshrate, currentpage, events):
+        def draw_button(self, refreshrate, currentpage, events):
             x_dimension, y_dimension = screen.get_size()
             mouspos = pg.mouse.get_pos()
             currenttext = pg.font.Font(self.currentfont ,(int(y_dimension * self.currentsize)))
@@ -84,7 +82,7 @@ async def main():
                     usrname = event.text
                     SET = Text(label, self.xcords + 0.15, self.ycords, 0.13)
                     while pg.time.get_ticks() - starttime < 2000:
-                        await SET.draw_title()
+                        SET.draw_title()
                         pg.display.flip()
                     event.text = ""
             self.manager.update(refreshrate)
@@ -126,19 +124,35 @@ async def main():
             self.manager.draw_ui(screen)
             return usrname, None, currentpage
 
+    class checkbox:
+        def __init__(self, xcords, ycords, xdimension, ydimension):
+            self.xcords = xcords
+            self.ycords = ycords
+            self.xdimension = xdimension
+            self.ydimension = ydimension
+            self.screenx, self.screeny = screen.get_size()
+            self.manager = pgui.UIManager((self.screenx, self.screeny))
+            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=self.manager)
+        def draw_checkbox(self, refreshrate, events):
+            for event in events:
+                self.manager.process_events(event)
+            self.manager.update(refreshrate)
+            self.manager.draw_ui(screen)
+
     class page:
-        def __init__(self, title, buttons, inputs, networkinputs):
+        def __init__(self, title, buttons, inputs, networkinputs, checkboxes):
             self.title = title
             self.buttons = buttons
             self.inputs = inputs
             self.networkinputs = networkinputs
+            self.checkboxes = checkboxes
 
         async def draw_page(self, refreshrate, events, currentpage, usrname, roomcode):
             screen.fill((215, 0, 64))
-            await self.title.draw_title()
+            self.title.draw_title()
             if self.buttons != None:
                 for button in self.buttons:
-                    currentpage = await button.draw_button(refreshrate, currentpage, events)
+                    currentpage = button.draw_button(refreshrate, currentpage, events)
 
             if self.inputs != None:
                 for input in self.inputs:
@@ -149,20 +163,9 @@ async def main():
                     usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, currentpage)
             return currentpage, usrname, roomcode
 
-    class checkbox:
-        def __init__(self, xcords, ycords, xdimension, ydimension):
-            self.xcords = xcords
-            self.ycords = ycords
-            self.xdimension = xdimension
-            self.ydimension = ydimension
-            self.screenx, self.screeny = screen.get_size()
-            self.manager = pgui.UIManager((self.screenx, self.screeny))
-            self.checkbox = pgui.elements.UICheckBox(relative_rect=(self.xcords * self.screenx, self.ycords * self.screeny, self.xdimension * self.screenx, self.ydimension * self.screeny), text="", manager=self.manager)
-        async def draw_checkbox(self, refreshrate, events):
-            for event in events:
-                self.manager.process_events(event)
-            self.manager.update(refreshrate)
-            self.manager.draw_ui(screen)
+            if self.checkboxes != None:
+                for checkbox in self.checkboxes:
+                    checkbox.draw_checkbox()
 
     async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
         x, y = screen.get_size()
@@ -186,7 +189,7 @@ async def main():
         await CUTIN.draw_title()
         await ZEROSEVENSWAP.draw_title()
 
-        currentpage = await LEAVE.draw_button(refreshrate, currentpage, events)
+        currentpage = LEAVE.draw_button(refreshrate, currentpage, events)
 
         return currentpage, usrname, roomcode
 
@@ -208,20 +211,20 @@ async def main():
         JOIN = button("JOIN", 0.5, 0.6, "join", None)
         USERNAME = button("USERNAME", 0.5, 0.4, "username", None)
         UNO = Text("UNO", 0.5, 0.1, 0.13)
-        HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None)
+        HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None, None)
         #this is all the objects for test
         TEST = Text("TEST", 0.5, 0.1, 0.13)
-        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
+        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None, None)
         #All object for create page
         CREATETITLE = Text("Enter Room Code", 0.5, 0.1, 0.13)
         CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "HC")
-        CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE])
+        CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE], None)
         #This is all objects for Username page
         USERNAMETITLE = Text("Enter Username", 0.5, 0.1, 0.13)
-        USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
+        USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None, None)
         #All objects for join page
         JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "JL")
-        JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE])
+        JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE], None)
         #all objects for settings on lobby creation page
 
         while playing:

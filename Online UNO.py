@@ -7,6 +7,21 @@ async def main():
     pg.init()
     screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
     pg.display.set_caption("Online Uno | Raj B :D")
+
+    class images(pg.sprite.Sprite):
+        def __init__(self, xcord, ycord, filename, xdimension, ydimension):
+            pg.sprite.Sprite.__init__(self)
+            self.xcord = xcord
+            self.ycord = ycord
+            self.screenx, self.screeny = screen.get_size()
+            self.image = pg.image.load(filename)
+            self.width = self.screenx * xdimension
+            self.height = self.screeny * ydimension
+            self.image = pg.transform.scale(self.image, (self.width, self.height))
+            self.rect = self.image.get_rect(center = (self.screenx * self.xcord , self.screeny * self.ycord))
+        def drawimage(self):
+            screen.blit(self.image, self.rect)
+
     class Text:
         def __init__(self, label, x_pos, y_pos, size):
             self.label = label
@@ -75,6 +90,8 @@ async def main():
             self.box = pgui.elements.UITextEntryLine(relative_rect=self.rect, manager=self.manager, object_id="#main_text_entry")
 
         async def draw_box(self, events, refreshrate, usrname, label):
+            Sprite = images(0.7, 0.42, "noun_enterkey_6369765_@700.png", 0.08, 0.1)
+            Sprite.drawimage()
             for event in events:
                 self.manager.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
@@ -96,7 +113,8 @@ async def main():
             self.type = type
 
         async def send_input(self, events, refreshrate, usrname, currentpage):
-
+            Sprite = images(0.7, 0.42, "noun_enterkey_6369765_@700.png", 0.08, 0.1)
+            Sprite.drawimage()
             for event in events:
                 self.manager.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
@@ -140,12 +158,11 @@ async def main():
             self.manager.draw_ui(screen)
 
     class page:
-        def __init__(self, title, buttons, inputs, networkinputs, checkboxes):
+        def __init__(self, title, buttons, inputs, networkinputs):
             self.title = title
             self.buttons = buttons
             self.inputs = inputs
             self.networkinputs = networkinputs
-            self.checkboxes = checkboxes
 
         async def draw_page(self, refreshrate, events, currentpage, usrname, roomcode):
             screen.fill((215, 0, 64))
@@ -163,35 +180,50 @@ async def main():
                     usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, currentpage)
             return currentpage, usrname, roomcode
 
+    class LobbyRectangles:
+        def __init__(self, xdimension, ydimension, xcord, ycord):
+            self.screenx , self.screeny = screen.get_size()
+            self.xdimension = xdimension
+            self.ydimension = ydimension
+            self.xcord = xcord
+            self.ycord = ycord
+        def drawrects(self):
+            pg.draw.rect(screen, (192, 30, 76), (self.screenx * self.xcord, self.screeny * self.ycord, self.screenx * self.xdimension, self.ydimension * self.screeny), width=0, border_radius=60)
+
+    class LobbyMenu(page):
+        def __init__(self, title, buttons, inputs, networkinputs, checkboxes, rects):
+            super().__init__(title, buttons, inputs, networkinputs)
+            self.checkboxes = checkboxes
+            self.rects = rects
+
+        async def draw_menu(self, refreshrate, events, currentpage, usrname, roomcode):
+            screen.fill((222, 49, 99))
+
+            if self.rects != None:
+                for rect in self.rects:
+                    rect.drawrects()
+
+            if self.title != None:
+                for titles in self.title:
+                    titles.draw_title()
+
+            if self.buttons != None:
+                for button in self.buttons:
+                    currentpage = button.draw_button(refreshrate, currentpage, events)
+
+            if self.inputs != None:
+                for input in self.inputs:
+                    usrname = await input.draw_box(events, refreshrate, usrname, "username set")
+
+            if self.networkinputs != None:
+                for netinput in self.networkinputs:
+                    usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, currentpage)
+
             if self.checkboxes != None:
                 for checkbox in self.checkboxes:
-                    checkbox.draw_checkbox()
+                    checkbox.draw_checkbox(refreshrate, events)
 
-    async def hostmenu(refreshrate, events, currentpage, usrname, roomcode, LEAVE= button("LEAVE", 0.8, 0.1, "home", None), LOBBYMENU= Text("Lobby Menu", 0.5, 0.1, 0.05), stackdrawcards= checkbox(0.3, 0.33, 0.05, 0.05)):
-        x, y = screen.get_size()
-        screen.fill((222, 49, 99))
-        ROOMCODE = Text(roomcode, 0.1, 0.1, 0.05)
-        pg.draw.rect(screen, (192, 30, 76), (x*0.01, y*0.2, x*0.28, y*0.7), width=0, border_radius=60)
-        pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.2, x*0.32, y*0.35), width=0, border_radius=60)
-        pg.draw.rect(screen, (192, 30, 76), (x*0.30, y*0.57, x*0.32, y*0.35), width=0, border_radius=60)
-        pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.2, x*0.35, y*0.35), width=0, border_radius=60)
-        pg.draw.rect(screen, (192, 30, 76), (x*0.63, y*0.57, x*0.35, y*0.35), width=0, border_radius=60)
-        RULES = Text("Rules", 0.08, 0.25, 0.05)
-        CARDS = Text("Cards", 0.11, 0.37, 0.04)
-        CUTIN = Text("Cut IN", 0.11, 0.42, 0.04)
-        ZEROSEVENSWAP = Text("0-7 swap", 0.11, 0.45, 0.04)
-        await LOBBYMENU.draw_title()
-        await ROOMCODE.draw_title()
-        await RULES.draw_title()
-        await STACKDRAW.draw_title()
-        await CARDS.draw_title()
-        await stackdrawcards.draw_checkbox(refreshrate, events)
-        await CUTIN.draw_title()
-        await ZEROSEVENSWAP.draw_title()
-
-        currentpage = LEAVE.draw_button(refreshrate, currentpage, events)
-
-        return currentpage, usrname, roomcode
+            return currentpage, usrname, roomcode
 
     async def usermenu(refreshrate, events, currentpage, usrname, roomcode):
         screen.fill((222, 49, 99))
@@ -211,21 +243,50 @@ async def main():
         JOIN = button("JOIN", 0.5, 0.6, "join", None)
         USERNAME = button("USERNAME", 0.5, 0.4, "username", None)
         UNO = Text("UNO", 0.5, 0.1, 0.13)
-        HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None, None)
+        HOME = page(UNO, [CREATE, JOIN, USERNAME], None, None)
         #this is all the objects for test
         TEST = Text("TEST", 0.5, 0.1, 0.13)
-        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None, None)
+        TESTPAGE = page(TEST, [BACK, CREATE, JOIN], None, None)
         #All object for create page
         CREATETITLE = Text("Enter Room Code", 0.5, 0.1, 0.13)
         CREATEROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "HC")
-        CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE], None)
+        CREATEPAGE = page(CREATETITLE, [BACK], None, [CREATEROOMCODE])
         #This is all objects for Username page
         USERNAMETITLE = Text("Enter Username", 0.5, 0.1, 0.13)
-        USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None, None)
+        USERNAMEPAGE = page(USERNAMETITLE, [BACK], [USERNAMEBOX], None)
         #All objects for join page
         JOINROOMCODE = NetworkTextinputs(0.3525, 0.4, 0.3, 0.07, "JL")
-        JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE], None)
+        JOINPAGE = page(CREATETITLE, [BACK], None, [JOINROOMCODE])
         #all objects for settings on lobby creation page
+        LEAVE = button("LEAVE", 0.8, 0.1, "home", None)
+        #all text for lobby creation page
+        LOBBYMENU = Text("Lobby Menu", 0.5, 0.1, 0.05)
+        ROOMCODE = Text(str(roomcode), 0.1, 0.1, 0.05)
+        RULES = Text("Rules", 0.11, 0.25, 0.05)
+        STACKDRAW = Text("Stack Draw", 0.11, 0.33, 0.04)
+        CARDS = Text("Cards", 0.11, 0.37, 0.04)
+        CUTIN = Text("Cut In", 0.11, 0.425, 0.04)
+        ZEROSEVENSWAP = Text("0-7 swap", 0.11, 0.48, 0.04)
+        FORCEDDRAW = Text("Forced Draw", 0.11, 0.54, 0.04)
+        PLAYONDRAW = Text("Play on Draw", 0.11, 0.6, 0.04)
+        DEFLECTION = Text("Deflection", 0.11, 0.66, 0.04)
+        SKIPTURN = Text("Skip Turn", 0.11, 0.72, 0.04)
+        ONDRAW = Text("On Draw", 0.11, 0.76, 0.04)
+        #all checkboxes for lobby creation page
+        CHECKSTACKDRAW = checkbox(0.25, 0.32, 0.025, 0.04)
+        CHECKCUTIN = checkbox(0.25, 0.395, 0.025, 0.04)
+        CHECKZEROSEVENSWAP = checkbox(0.25, 0.455, 0.025, 0.04)
+        CHECKFORCEDDRAW = checkbox(0.25, 0.515, 0.025, 0.04)
+        CHECKPLAYONDRAW = checkbox(0.25, 0.575, 0.025, 0.04)
+        CHECKDEFLECTION = checkbox(0.25, 0.635, 0.025, 0.04)
+        CHECKSKIPTURN = checkbox(0.25, 0.715, 0.025, 0.04)
+        #rectangles for lobby frfr
+        RULESREC = LobbyRectangles(0.28, 0.7, 0.005, 0.2)
+        MODESREC = LobbyRectangles(0.32, 0.35, 0.3, 0.2)
+        ADDONSREC = LobbyRectangles(0.32, 0.35, 0.3, 0.57)
+        USERSREC = LobbyRectangles(0.35, 0.35, 0.63, 0.2)
+        CHATREC = LobbyRectangles(0.35, 0.35, 0.63, 0.57)
+        HOSTMENU = LobbyMenu([LOBBYMENU, ROOMCODE, RULES, CARDS, CUTIN, ZEROSEVENSWAP, STACKDRAW, FORCEDDRAW, PLAYONDRAW, DEFLECTION, SKIPTURN, ONDRAW], [LEAVE], None, None, [CHECKSTACKDRAW, CHECKCUTIN, CHECKZEROSEVENSWAP, CHECKFORCEDDRAW, CHECKPLAYONDRAW, CHECKDEFLECTION, CHECKSKIPTURN], [RULESREC, MODESREC, ADDONSREC, USERSREC, CHATREC])
 
         while playing:
             events = pg.event.get()
@@ -241,8 +302,10 @@ async def main():
             if currentpage == "join":
                 currentpage, usrname, roomcode = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "host":
-                currentpage, usrname, roomcode = await hostmenu(refreshrate, events, currentpage, usrname, roomcode)
+                HOSTMENU.title[1] = Text(str(roomcode), 0.15, 0.1, 0.05) #updates the roomcode display to be the same as the one inputted by the user, instead of the default 0 value
+                currentpage, usrname, roomcode = await HOSTMENU.draw_menu(refreshrate, events, currentpage, usrname, roomcode)
             if currentpage == "user":
+                ROOMCODE = Text(str(roomcode), 0.5, 0.1, 0.05)
                 currentpage, usrname, roomcode = await usermenu(refreshrate, events, currentpage, usrname, roomcode)
 
             for event in events:

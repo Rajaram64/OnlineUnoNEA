@@ -2,8 +2,6 @@ import websockets
 import asyncio
 import json
 
-request_type = "HC"
-
 clients = []
 lobbies = [] #lobby will have sublists, each containing the roomcode as the first value, and then all usernames, and then tags for settings
 usernames = []
@@ -47,9 +45,7 @@ async def handle_client_connections(connection):
         await connection.send(confirmation)
 
 async def main():
-    global request_type
-    if request_type == "HC":
-        server = await websockets.serve(handle_client_connections, "localhost", 8765)
-        await asyncio.Future()
+    server = await websockets.serve(handle_client_connections, "localhost", 8765)
+    await asyncio.Future()
 
 asyncio.run(main())

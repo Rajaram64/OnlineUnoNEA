@@ -91,7 +91,6 @@ async def main():
 
         async def draw_box(self, events, refreshrate, usrname, label):
             Sprite = images(0.7, 0.42, "noun_enterkey_6369765_@700.png", 0.08, 0.1)
-            Sprite.drawimage()
             for event in events:
                 self.manager.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
@@ -102,6 +101,7 @@ async def main():
                         SET.draw_title()
                         pg.display.flip()
                     event.text = ""
+            Sprite.drawimage()
             self.manager.update(refreshrate)
             self.manager.draw_ui(screen)
             return usrname
@@ -114,7 +114,6 @@ async def main():
 
         async def send_input(self, events, refreshrate, usrname, currentpage):
             Sprite = images(0.7, 0.42, "noun_enterkey_6369765_@700.png", 0.08, 0.1)
-            Sprite.drawimage()
             for event in events:
                 self.manager.process_events(event)
                 if event.type == pgui.UI_TEXT_ENTRY_FINISHED and event.ui_object_id == "#main_text_entry":
@@ -138,6 +137,7 @@ async def main():
                         return usrname, usrinput, currentpage
                     except:
                         pass
+            Sprite.drawimage()
             self.manager.update(refreshrate)
             self.manager.draw_ui(screen)
             return usrname, None, currentpage
@@ -173,7 +173,7 @@ async def main():
 
             if self.inputs != None:
                 for input in self.inputs:
-                    usrname = await input.draw_box(events, refreshrate, usrname, "username set")
+                    usrname = await input.draw_box(events, refreshrate, usrname, "Username set")
 
             if self.networkinputs != None:
                 for netinput in self.networkinputs:
@@ -187,14 +187,46 @@ async def main():
             self.ydimension = ydimension
             self.xcord = xcord
             self.ycord = ycord
+            self.rectangle = pg.Rect((self.screenx * self.xcord, self.screeny * self.ycord),(self.screenx * self.xdimension, self.screeny * self.ydimension))
+            self.colour = (159, 25, 63)
+            self.selected = False
+
         def drawrects(self):
-            pg.draw.rect(screen, (192, 30, 76), (self.screenx * self.xcord, self.screeny * self.ycord, self.screenx * self.xdimension, self.ydimension * self.screeny), width=0, border_radius=60)
+            pg.draw.rect(screen, (192, 30, 76), self.rectangle, width=0, border_radius=30)
+
+    class LobbyButtonRects(LobbyRectangles):
+        def __init__(self, xdimension, ydimension, xcord, ycord, imagelabel):
+            super().__init__(xdimension, ydimension, xcord, ycord)
+            self.imagelabel = imagelabel
+            self.actualimagefrfr = images(self.xcord + 0.05, self.ycord + 0.12, self.imagelabel, 0.08, 0.2)
+
+        def draw_buttonrects(self, events):
+            mouspos = pg.mouse.get_pos()
+            hover = self.rectangle.collidepoint(mouspos)
+            if hover == True and self.selected == False:
+                self.colour = (105, 15, 40)
+            elif hover == False and self.selected == False:
+                self.colour = (159, 25, 63)
+            elif hover == True and self.selected == True:
+                self.colour = (136, 214, 108)
+            elif hover == False and self.selected == True:
+                self.colour = (78, 167, 46)
+
+            for event in events:
+                if event.type == pg.MOUSEBUTTONDOWN and event.button == 1 and hover:
+                    if self.selected == False:
+                        self.selected = True
+                    else:
+                        self.selected = False
+            pg.draw.rect(screen, self.colour, self.rectangle, width=0, border_radius=30)
+            self.actualimagefrfr.drawimage()
 
     class LobbyMenu(page):
-        def __init__(self, title, buttons, inputs, networkinputs, checkboxes, rects):
+        def __init__(self, title, buttons, inputs, networkinputs, checkboxes, rects, buttonrects):
             super().__init__(title, buttons, inputs, networkinputs)
             self.checkboxes = checkboxes
             self.rects = rects
+            self.buttonrects = buttonrects
 
         async def draw_menu(self, refreshrate, events, currentpage, usrname, roomcode):
             screen.fill((222, 49, 99))
@@ -202,6 +234,10 @@ async def main():
             if self.rects != None:
                 for rect in self.rects:
                     rect.drawrects()
+
+            if self.buttonrects != None:
+                for buttonrectangles in self.buttonrects:
+                    buttonrectangles.draw_buttonrects(events)
 
             if self.title != None:
                 for titles in self.title:
@@ -263,6 +299,7 @@ async def main():
         LOBBYMENU = Text("Lobby Menu", 0.5, 0.1, 0.05)
         ROOMCODE = Text(str(roomcode), 0.1, 0.1, 0.05)
         RULES = Text("Rules", 0.11, 0.25, 0.05)
+        MODES = Text("Modes", 0.46, 0.25, 0.05)
         STACKDRAW = Text("Stack Draw", 0.11, 0.33, 0.04)
         CARDS = Text("Cards", 0.11, 0.37, 0.04)
         CUTIN = Text("Cut In", 0.11, 0.425, 0.04)
@@ -286,24 +323,35 @@ async def main():
         ADDONSREC = LobbyRectangles(0.32, 0.35, 0.3, 0.57)
         USERSREC = LobbyRectangles(0.35, 0.35, 0.63, 0.2)
         CHATREC = LobbyRectangles(0.35, 0.35, 0.63, 0.57)
-        HOSTMENU = LobbyMenu([LOBBYMENU, ROOMCODE, RULES, CARDS, CUTIN, ZEROSEVENSWAP, STACKDRAW, FORCEDDRAW, PLAYONDRAW, DEFLECTION, SKIPTURN, ONDRAW], [LEAVE], None, None, [CHECKSTACKDRAW, CHECKCUTIN, CHECKZEROSEVENSWAP, CHECKFORCEDDRAW, CHECKPLAYONDRAW, CHECKDEFLECTION, CHECKSKIPTURN], [RULESREC, MODESREC, ADDONSREC, USERSREC, CHATREC])
+        #special rectangles that act like buttons idk
+        NOMERCYBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.305, 0.28, "NOMERCY.png")
+        UNOBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.41, 0.28, "UNO.jpg")
+        UNOFLIPBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.515, 0.28, "FLIP.png")
+
+        HOSTMENU = LobbyMenu([LOBBYMENU, ROOMCODE, RULES, CARDS, CUTIN, ZEROSEVENSWAP, STACKDRAW, FORCEDDRAW, PLAYONDRAW, DEFLECTION, SKIPTURN, ONDRAW, MODES], [LEAVE], None, None, [CHECKSTACKDRAW, CHECKCUTIN, CHECKZEROSEVENSWAP, CHECKFORCEDDRAW, CHECKPLAYONDRAW, CHECKDEFLECTION, CHECKSKIPTURN], [RULESREC, MODESREC, ADDONSREC, USERSREC, CHATREC], [NOMERCYBUTTONREC, UNOBUTTONREC, UNOFLIPBUTTONREC])
 
         while playing:
             events = pg.event.get()
             refreshrate = fps.tick(60)/1000 #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
             if currentpage == "home":
                 currentpage, usrname, roomcode = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "test":
                 currentpage, usrname, roomcode = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "create":
                 currentpage, usrname, roomcode = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "username":
                 currentpage, usrname, roomcode = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "join":
                 currentpage, usrname, roomcode = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "host":
                 HOSTMENU.title[1] = Text(str(roomcode), 0.15, 0.1, 0.05) #updates the roomcode display to be the same as the one inputted by the user, instead of the default 0 value
                 currentpage, usrname, roomcode = await HOSTMENU.draw_menu(refreshrate, events, currentpage, usrname, roomcode)
+
             if currentpage == "user":
                 ROOMCODE = Text(str(roomcode), 0.5, 0.1, 0.05)
                 currentpage, usrname, roomcode = await usermenu(refreshrate, events, currentpage, usrname, roomcode)

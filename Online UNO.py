@@ -188,8 +188,6 @@ async def main():
             self.xcord = xcord
             self.ycord = ycord
             self.rectangle = pg.Rect((self.screenx * self.xcord, self.screeny * self.ycord),(self.screenx * self.xdimension, self.screeny * self.ydimension))
-            self.colour = (159, 25, 63)
-            self.selected = False
 
         def drawrects(self):
             pg.draw.rect(screen, (192, 30, 76), self.rectangle, width=0, border_radius=30)
@@ -199,8 +197,10 @@ async def main():
             super().__init__(xdimension, ydimension, xcord, ycord)
             self.imagelabel = imagelabel
             self.actualimagefrfr = images(self.xcord + 0.05, self.ycord + 0.12, self.imagelabel, 0.08, 0.2)
+            self.colour = (159, 25, 63)
+            self.selected = False
 
-        def draw_buttonrects(self, events):
+        def draw_buttonrects(self, events, allbuttons):
             mouspos = pg.mouse.get_pos()
             hover = self.rectangle.collidepoint(mouspos)
             if hover == True and self.selected == False:
@@ -215,9 +215,12 @@ async def main():
             for event in events:
                 if event.type == pg.MOUSEBUTTONDOWN and event.button == 1 and hover:
                     if self.selected == False:
+                        for buttonrec in allbuttons:
+                            buttonrec.selected = False
                         self.selected = True
-                    else:
+                    elif self.selected == True:
                         self.selected = False
+
             pg.draw.rect(screen, self.colour, self.rectangle, width=0, border_radius=30)
             self.actualimagefrfr.drawimage()
 
@@ -237,7 +240,7 @@ async def main():
 
             if self.buttonrects != None:
                 for buttonrectangles in self.buttonrects:
-                    buttonrectangles.draw_buttonrects(events)
+                    buttonrectangles.draw_buttonrects(events, self.buttonrects)
 
             if self.title != None:
                 for titles in self.title:

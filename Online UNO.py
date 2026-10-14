@@ -112,7 +112,7 @@ async def main():
             self.connectionpoint = "ws://localhost:8765"
             self.type = type
 
-        async def send_input(self, events, refreshrate, usrname, currentpage):
+        async def send_input(self, events, refreshrate, usrname, currentpage, connection):
             Sprite = images(0.7, 0.42, "noun_enterkey_6369765_@700.png", 0.08, 0.1)
             for event in events:
                 self.manager.process_events(event)
@@ -134,13 +134,13 @@ async def main():
                         await connection.close()
                         print(confirmation)
                         currentpage = "host"
-                        return usrname, usrinput, currentpage
+                        return usrname, usrinput, currentpage, connection
                     except:
                         pass
             Sprite.drawimage()
             self.manager.update(refreshrate)
             self.manager.draw_ui(screen)
-            return usrname, None, currentpage
+            return usrname, None, currentpage, connection
 
     class checkbox:
         def __init__(self, xcords, ycords, xdimension, ydimension):
@@ -164,7 +164,7 @@ async def main():
             self.inputs = inputs
             self.networkinputs = networkinputs
 
-        async def draw_page(self, refreshrate, events, currentpage, usrname, roomcode):
+        async def draw_page(self, refreshrate, events, currentpage, usrname, roomcode, connection):
             screen.fill((215, 0, 64))
             self.title.draw_title()
             if self.buttons != None:
@@ -177,8 +177,8 @@ async def main():
 
             if self.networkinputs != None:
                 for netinput in self.networkinputs:
-                    usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, currentpage)
-            return currentpage, usrname, roomcode
+                    usrname, roomcode, currentpage, connection = await netinput.send_input(events, refreshrate, usrname, currentpage, connection)
+            return currentpage, usrname, roomcode, connection
 
     class LobbyRectangles:
         def __init__(self, xdimension, ydimension, xcord, ycord):
@@ -225,13 +225,15 @@ async def main():
             self.actualimagefrfr.drawimage()
 
     class LobbyMenu(page):
-        def __init__(self, title, buttons, inputs, networkinputs, checkboxes, rects, buttonrects):
+        def __init__(self, title, buttons, inputs, networkinputs, checkboxes, rects, buttonrects, unoaddonrects, nomercyaddonrects):
             super().__init__(title, buttons, inputs, networkinputs)
             self.checkboxes = checkboxes
             self.rects = rects
             self.buttonrects = buttonrects
+            self.unoaddonrects = unoaddonrects
+            self.nomercyaddonrects = nomercyaddonrects
 
-        async def draw_menu(self, refreshrate, events, currentpage, usrname, roomcode):
+        async def draw_menu(self, refreshrate, events, currentpage, usrname, roomcode, connection):
             screen.fill((222, 49, 99))
 
             if self.rects != None:
@@ -241,6 +243,14 @@ async def main():
             if self.buttonrects != None:
                 for buttonrectangles in self.buttonrects:
                     buttonrectangles.draw_buttonrects(events, self.buttonrects)
+
+            if self.unoaddonrects != None:
+                for unoaddonrect in self.unoaddonrects:
+                    unoaddonrect.draw_buttonrects(events, self.unoaddonrects)
+
+            if self.nomercyaddonrects != None:
+                for nomercyaddonrect in self.nomercyaddonrects:
+                    nomercyaddonrect.draw_buttonrects(events, self.unoaddonrects)
 
             if self.title != None:
                 for titles in self.title:
@@ -256,13 +266,13 @@ async def main():
 
             if self.networkinputs != None:
                 for netinput in self.networkinputs:
-                    usrname, roomcode, currentpage = await netinput.send_input(events, refreshrate, usrname, currentpage)
+                    usrname, roomcode, currentpage, connection = await netinput.send_input(events, refreshrate, usrname, currentpage, connection)
 
             if self.checkboxes != None:
                 for checkbox in self.checkboxes:
                     checkbox.draw_checkbox(refreshrate, events)
 
-            return currentpage, usrname, roomcode
+            return currentpage, usrname, roomcode, connection
 
     async def usermenu(refreshrate, events, currentpage, usrname, roomcode):
         screen.fill((222, 49, 99))
@@ -270,6 +280,7 @@ async def main():
         return currentpage, usrname, roomcode
 
     async def homeloop():
+        connection = None
         usrname = ""
         roomcode = 0
         USERNAMEBOX = textinputs(0.3525, 0.4, 0.3, 0.07)
@@ -312,6 +323,7 @@ async def main():
         DEFLECTION = Text("Deflection", 0.11, 0.66, 0.04)
         SKIPTURN = Text("Skip Turn", 0.11, 0.72, 0.04)
         ONDRAW = Text("On Draw", 0.11, 0.76, 0.04)
+        ADDONS = Text("Add-ons",0.46, 0.62, 0.05)
         #all checkboxes for lobby creation page
         CHECKSTACKDRAW = checkbox(0.25, 0.32, 0.025, 0.04)
         CHECKCUTIN = checkbox(0.25, 0.395, 0.025, 0.04)
@@ -330,30 +342,31 @@ async def main():
         NOMERCYBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.305, 0.28, "NOMERCY.png")
         UNOBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.41, 0.28, "UNO.jpg")
         UNOFLIPBUTTONREC = LobbyButtonRects(0.1, 0.26, 0.515, 0.28, "FLIP.png")
-
-        HOSTMENU = LobbyMenu([LOBBYMENU, ROOMCODE, RULES, CARDS, CUTIN, ZEROSEVENSWAP, STACKDRAW, FORCEDDRAW, PLAYONDRAW, DEFLECTION, SKIPTURN, ONDRAW, MODES], [LEAVE], None, None, [CHECKSTACKDRAW, CHECKCUTIN, CHECKZEROSEVENSWAP, CHECKFORCEDDRAW, CHECKPLAYONDRAW, CHECKDEFLECTION, CHECKSKIPTURN], [RULESREC, MODESREC, ADDONSREC, USERSREC, CHATREC], [NOMERCYBUTTONREC, UNOBUTTONREC, UNOFLIPBUTTONREC])
+        #Rectangles for addons
+        UNOREVERSEDADDON = LobbyButtonRects(0.1, 0.26, 0.46, 0.6, "UNOREVERSEADDON.png")
+        HOSTMENU = LobbyMenu([LOBBYMENU, ROOMCODE, RULES, CARDS, CUTIN, ZEROSEVENSWAP, STACKDRAW, FORCEDDRAW, PLAYONDRAW, DEFLECTION, SKIPTURN, ONDRAW, MODES, ADDONS], [LEAVE], None, None, [CHECKSTACKDRAW, CHECKCUTIN, CHECKZEROSEVENSWAP, CHECKFORCEDDRAW, CHECKPLAYONDRAW, CHECKDEFLECTION, CHECKSKIPTURN], [RULESREC, MODESREC, ADDONSREC, USERSREC, CHATREC], [NOMERCYBUTTONREC, UNOBUTTONREC, UNOFLIPBUTTONREC], [UNOREVERSEDADDON], [None])
 
         while playing:
             events = pg.event.get()
             refreshrate = fps.tick(60)/1000 #limits framerate to 60 fps as well as returning time elapsed (in seconds) since the previous frame
             if currentpage == "home":
-                currentpage, usrname, roomcode = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await HOME.draw_page(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "test":
-                currentpage, usrname, roomcode = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await TESTPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "create":
-                currentpage, usrname, roomcode = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await CREATEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "username":
-                currentpage, usrname, roomcode = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await USERNAMEPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "join":
-                currentpage, usrname, roomcode = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await JOINPAGE.draw_page(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "host":
                 HOSTMENU.title[1] = Text(str(roomcode), 0.15, 0.1, 0.05) #updates the roomcode display to be the same as the one inputted by the user, instead of the default 0 value
-                currentpage, usrname, roomcode = await HOSTMENU.draw_menu(refreshrate, events, currentpage, usrname, roomcode)
+                currentpage, usrname, roomcode, connection = await HOSTMENU.draw_menu(refreshrate, events, currentpage, usrname, roomcode, connection)
 
             if currentpage == "user":
                 ROOMCODE = Text(str(roomcode), 0.5, 0.1, 0.05)

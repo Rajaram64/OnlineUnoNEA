@@ -2,16 +2,9 @@ import websockets
 import asyncio
 import json
 
-clients = []
-lobbies = [] #lobby will have sublists, each containing the roomcode as the first value, and then all usernames, and then tags for settings
-usernames = []
-roomcodes = []
+lobbies = {} #key is roomcode, wkith data being a set of users. first user in set is host (forst to join therefore they created it)
 async def handle_client_connections(connection):
-    global clients
     global lobbies
-    global usernames
-    global request_type
-    global roomcodes
 
     packet = await connection.recv()
     packet = json.loads(packet)
@@ -22,24 +15,16 @@ async def handle_client_connections(connection):
     type = str(packet["package"][0]["type"])
     print(type)
 
-    if type == "HC" and roomcode not in roomcodes and username not in usernames and username != "":
-        identifier = [username, roomcode, type]
-        usernames.append(username)
-        clients.append(identifier)
-        lobbies.append([roomcode, [username, type]])
-        roomcodes.append(roomcode)
+    if type == "HC":
+        lobbies[roomcode] = set([username])
         confirmation = f"host {username} connected and created lobby {roomcode}"
         await connection.send(confirmation)
 
-    elif type == "JL" and roomcode in roomcodes and username not in usernames and username != "":
-        identifier = [username, roomcode, type]
-        usernames.append(username)
-        clients.append(identifier)
-        lobbies[roomcodes.index(roomcode)].append([username, type])
+    elif type == "JL":
+        lobbies[roomcode].add(username)
         confirmation = f"{username} joined lobby {roomcode}"
         await connection.send(confirmation)
         print(lobbies)
-        print(clients)
     else:
         confirmation = f"sent invalid type or invalid username or idk bro"
         await connection.send(confirmation)
